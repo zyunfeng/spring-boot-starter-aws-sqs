@@ -1,17 +1,12 @@
 package com.example.starter.aws.sqs.client;
 
+import com.example.starter.aws.sqs.aws.AwsSqsClientProxy;
+import com.example.starter.aws.sqs.aws.model.AwsMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
-import software.amazon.awssdk.auth.credentials.*;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.*;
 import software.amazon.awssdk.utils.CollectionUtils;
 import software.amazon.awssdk.utils.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,7 +14,7 @@ import java.util.List;
  *
  * @author Yunfeng Zhao
  */
-public class AwsSqsTemplate implements AwsSqsOperations, InitializingBean, DisposableBean {
+public class AwsSqsTemplate implements AwsSqsOperations {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AwsSqsTemplate.class);
 
@@ -27,11 +22,6 @@ public class AwsSqsTemplate implements AwsSqsOperations, InitializingBean, Dispo
      * Queue name of the sqs
      */
     private final String queueName;
-
-    /**
-     * Queue region of the sqs
-     */
-    private final Region region;
 
     /**
      * Max number when receive Messages
@@ -46,30 +36,24 @@ public class AwsSqsTemplate implements AwsSqsOperations, InitializingBean, Dispo
     /**
      * Queue url of the sqs
      */
-    private String queueUrl;
+    private final String queueUrl;
 
     /**
-     * Client of the sqs
+     * Proxy of the awsSqsClient
      */
-    private SqsClient sqsClient;
+    private AwsSqsClientProxy awsSqsClientProxy;
 
-    public AwsSqsTemplate(String queueName, Region region, int maxNumberOfMessages,
-                          int waitTimeSeconds) {
+    public AwsSqsTemplate(String queueName,
+                          int maxNumberOfMessages,
+                          int waitTimeSeconds,
+                          AwsSqsClientProxy awsSqsClientProxy) {
         this.queueName = queueName;
-        this.region = region;
         this.maxNumberOfMessages = maxNumberOfMessages;
         this.waitTimeSeconds = waitTimeSeconds;
+        this.awsSqsClientProxy = awsSqsClientProxy;
+        this.queueUrl = awsSqsClientProxy.getQueueUrl(queueName);
     }
 
-    /**
-     * Init the client, and set queue url
-     */
-    @Override
-    public void afterPropertiesSet() {
-        setSqsClient();
-        setQueueUrl();
-        LOGGER.info("Aws sqs started queueName: " + queueName);
-    }
 
     /**
      * Send message
@@ -80,36 +64,21 @@ public class AwsSqsTemplate implements AwsSqsOperations, InitializingBean, Dispo
         if (StringUtils.isEmpty(messageBody)) {
             throw new IllegalArgumentException("messageBody must not be empty");
         }
-        SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .messageBody(messageBody)
-                .build();
-        sqsClient.sendMessage(sendMessageRequest);
+        awsSqsClientProxy.sendMessage(queueUrl, messageBody);
+        LOGGER.info("Aws sqs client send message successfully queueName: " + queueName);
     }
 
     /**
      * Send batch messages
-     * @param messageBodyList Message body list
+     * @param awsMessageList Message list
      */
     @Override
-    public void sendBatchMessages(List<String> messageBodyList) {
-        if (CollectionUtils.isNullOrEmpty(messageBodyList)) {
-            throw new IllegalArgumentException("messageBodyList must not be null or empty");
+    public void sendBatchMessages(List<AwsMessage> awsMessageList) {
+        if (CollectionUtils.isNullOrEmpty(awsMessageList)) {
+            throw new IllegalArgumentException("awsMessageList must not be null or empty");
         }
-        List<SendMessageBatchRequestEntry> entryList = new ArrayList<>();
-        int i = 1;
-        for (String messageBody: messageBodyList) {
-            entryList.add(SendMessageBatchRequestEntry.builder()
-                            .id(String.valueOf(i))
-                            .messageBody(messageBody)
-                            .build());
-            i++;
-        }
-        SendMessageBatchRequest sendMessageBatchRequest = SendMessageBatchRequest.builder()
-                .queueUrl(queueUrl)
-                .entries(entryList)
-                .build();
-        sqsClient.sendMessageBatch(sendMessageBatchRequest);
+        awsSqsClientProxy.sendBatchMessages(queueUrl, awsMessageList);
+        LOGGER.info("Aws sqs client send batch messages successfully queueName: " + queueName);
     }
 
     /**
@@ -117,71 +86,37 @@ public class AwsSqsTemplate implements AwsSqsOperations, InitializingBean, Dispo
      * @return List of the message
      */
     @Override
-    public List<Message> receiveMessages() {
-        ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .maxNumberOfMessages(maxNumberOfMessages)
-                .waitTimeSeconds(waitTimeSeconds)
-                .build();
-        return sqsClient.receiveMessage(receiveMessageRequest).messages();
+    public List<AwsMessage> receiveMessages() {
+        List<AwsMessage> messageList = awsSqsClientProxy.receiveMessages(queueUrl, maxNumberOfMessages, waitTimeSeconds);
+        LOGGER.info("Aws sqs client receive messages successfully queueName: " + queueName);
+        return messageList;
     }
 
     /**
      * Delete message
-     * @param message The message to be deleted
+     * @param awsMessage The message to be deleted
      */
     @Override
-    public void deleteMessage(Message message) {
-        if (null == message) {
-            throw new IllegalArgumentException("message must not be null");
+    public void deleteMessage(AwsMessage awsMessage) {
+        if (awsMessage == null) {
+            throw new IllegalArgumentException("awsMessage must not be null");
         }
-        DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .receiptHandle(message.receiptHandle())
-                .build();
-        sqsClient.deleteMessage(deleteMessageRequest);
+        awsSqsClientProxy.deleteMessage(queueUrl, awsMessage);
+        LOGGER.info("Aws sqs client delete message successfully queueName: " + queueName);
     }
 
     /**
      * Delete batch messages
-     * @param messageList Message list to be deleted
+     * @param awsMessageList Message list to be deleted
      */
     @Override
-    public void deleteBatchMessages(List<Message> messageList) {
-        if (CollectionUtils.isNullOrEmpty(messageList)) {
-            throw new IllegalArgumentException("messageList must not be null or empty");
+    public void deleteBatchMessages(List<AwsMessage> awsMessageList) {
+        if (CollectionUtils.isNullOrEmpty(awsMessageList)) {
+            throw new IllegalArgumentException("awsMessageList must not be null or empty");
         }
-        for (Message message: messageList) {
+        for (AwsMessage message: awsMessageList) {
             deleteMessage(message);
         }
-    }
-
-    /**
-     * Set the sqs client
-     */
-    private void setSqsClient() {
-        sqsClient = SqsClient.builder()
-                .region(region)
-                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
-                .build();
-    }
-
-    /**
-     * Set the queue url
-     */
-    private void setQueueUrl() {
-        GetQueueUrlRequest getQueueUrlRequest = GetQueueUrlRequest.builder()
-                .queueName(queueName)
-                .build();
-        queueUrl = sqsClient.getQueueUrl(getQueueUrlRequest).queueUrl();
-    }
-
-    /**
-     * Close the client connect, when spring boot destroy
-     */
-    @Override
-    public void destroy() {
-        sqsClient.close();
-        LOGGER.info("Aws sqs destroyed queueName: " + queueName);
+        LOGGER.info("Aws sqs client delete batch messages successfully queueName: " + queueName);
     }
 }
