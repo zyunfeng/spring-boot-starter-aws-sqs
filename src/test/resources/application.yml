@@ -1,0 +1,9 @@
+aws:
+  sqs:
+    enabled: true
+    region: us-east-1
+    queues:
+      - name: MyQueueTest
+        alias: myQueueTest
+        wait-time-seconds: 1
+        max-number-of-messages: 10

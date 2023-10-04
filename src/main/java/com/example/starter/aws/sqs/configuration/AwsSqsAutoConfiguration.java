@@ -1,5 +1,6 @@
 package com.example.starter.aws.sqs.configuration;
 
+import com.example.starter.aws.sqs.aws.AwsSqsClientProxy;
 import com.example.starter.aws.sqs.client.AwsSqsClientRegistrar;
 import com.example.starter.aws.sqs.properties.AwsSqsProperties;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -22,7 +23,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
         prefix = "aws.sqs",
         name = "enabled"
 )
-@Import({AwsSqsClientRegistrar.class})
+@Import({AwsSqsClientRegistrar.class, AwsSqsProperties.class})
 public class AwsSqsAutoConfiguration {
 
     @Bean

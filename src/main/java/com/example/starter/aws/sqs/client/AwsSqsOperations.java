@@ -1,5 +1,6 @@
 package com.example.starter.aws.sqs.client;
 
+import com.example.starter.aws.sqs.aws.model.AwsMessage;
 import software.amazon.awssdk.services.sqs.model.Message;
 
 import java.util.List;
@@ -13,11 +14,11 @@ public interface AwsSqsOperations {
 
     void sendMessage(String messageBody);
 
-    void sendBatchMessages(List<String> messageBodyList);
+    void sendBatchMessages(List<AwsMessage> batchMessageList);
 
-    List<Message> receiveMessages();
+    List<AwsMessage> receiveMessages();
 
-    void deleteMessage(Message message);
+    void deleteMessage(AwsMessage message);
 
-    void deleteBatchMessages(List<Message> messageList);
+    void deleteBatchMessages(List<AwsMessage> messageList);
 }
