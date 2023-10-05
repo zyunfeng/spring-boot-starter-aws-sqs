@@ -20,12 +20,12 @@ Configure the .yml file as follows:
 aws:
   sqs:
     enabled: true # Feature enabled
+    region: us-east-1 # Region of the sqs service
     queues: # Multiple queues as list
       - name: MyQueueTest # QueueName
         alias: myQueueTest # QueueAlias used to create different beans
         max-number-of-messages: 5 # Max number when receive Messages
         wait-time-seconds: 20 # Wait time seconds when long polling messages
-        region: us-east-1 # Queue region
 ````
 
 

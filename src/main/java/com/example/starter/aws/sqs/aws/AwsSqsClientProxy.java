@@ -79,13 +79,11 @@ public class AwsSqsClientProxy implements InitializingBean, DisposableBean {
      */
     public void sendBatchMessages(String queueUrl, List<AwsMessage> batchMessageList) {
         List<SendMessageBatchRequestEntry> entryList = new ArrayList<>();
-        int i = 1;
         for (AwsMessage awsMessage: batchMessageList) {
             entryList.add(SendMessageBatchRequestEntry.builder()
                     .id(awsMessage.getMessageId())
                     .messageBody(awsMessage.getBody())
                     .build());
-            i++;
         }
         SendMessageBatchRequest sendMessageBatchRequest = SendMessageBatchRequest.builder()
                 .queueUrl(queueUrl)

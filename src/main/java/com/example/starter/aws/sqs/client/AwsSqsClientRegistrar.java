@@ -13,7 +13,6 @@ import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 
-import software.amazon.awssdk.regions.Region;
 
 
 /**
