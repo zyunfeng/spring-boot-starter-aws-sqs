@@ -4,6 +4,7 @@ import com.example.starter.aws.sqs.aws.AwsSqsClientProxy;
 import com.example.starter.aws.sqs.aws.model.AwsMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import software.amazon.awssdk.utils.CollectionUtils;
 import software.amazon.awssdk.utils.StringUtils;
 
@@ -41,7 +42,7 @@ public class AwsSqsTemplate implements AwsSqsOperations {
     /**
      * Proxy of the awsSqsClient
      */
-    private AwsSqsClientProxy awsSqsClientProxy;
+    private final AwsSqsClientProxy awsSqsClientProxy;
 
     public AwsSqsTemplate(String queueName,
                           int maxNumberOfMessages,
